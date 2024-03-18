@@ -38,34 +38,34 @@ class Data_Structure:
 
         self.num_data_points = line_number
         self.validate_linked_list()
+        print(str(len(self.data_index)))
+        print(str(len(self.data_index_units)))
         return
 
     def graph_data_array(self, x_name, y_name):
         x_index = -1
         y_index = -1
         array_current_index = 0
-        data_array = []
 
-        while x_index == -1 and y_index == -1 and array_current_index <= len(self.data_index):
+        while x_index == -1 or y_index == -1 and array_current_index <= len(self.data_index):
             if self.data_index[array_current_index] == x_name:
                 x_index = array_current_index
             if self.data_index[array_current_index] == y_name:
                 y_index = array_current_index
+                print("y index set: y=" + str(y_index))
 
             array_current_index = array_current_index + 1
 
-        self.linked_list.quick_sort(self.linked_list.head, self.linked_list.get_tail_node(), x_index)
+        # self.linked_list.quick_sort(self.linked_list.head, self.linked_list.get_tail_node(), x_index)
 
-        x_array, y_array = self.linked_list.get_x_and_y_arrays(x_index,y_index)
-        i = 0
-        while i < len(x_array):
-            data_array.append([x_array[i],y_array[i]])
-            i = i+1
+        x_array, y_array = self.linked_list.get_x_and_y_arrays(x_index, y_index)
 
         x_axis_name = str(x_name) + " (" + str(self.data_index_units[x_index]) + ")"
         y_axis_name = str(y_name) + " (" + str(self.data_index_units[y_index]) + ")"
 
-        return data_array, x_axis_name, y_axis_name
+        print(y_index)
+        print(x_index)
+        return x_array, y_array, x_axis_name, y_axis_name
 
     def print_data_index(self):
         for string in self.data_index:
@@ -98,6 +98,9 @@ class Data_Structure:
             print("Number of total nodes: " + str(self.num_data_points))
 
         return
+
+    def get_variables(self):
+        return self.data_index, self.data_index_units
 
 
 class Node:
@@ -187,6 +190,7 @@ class Linked_List:
 
         return
 
+
     def quick_sort_pivot(self, head, tail, data_index):
         pivot = head
         front = head
@@ -212,7 +216,7 @@ class Linked_List:
         return node
 
     def get_x_and_y_arrays(self, x_index, y_index):
-        self.quick_sort(self.head, self.get_tail_node(), x_index)
+        # self.quick_sort(self.head, self.get_tail_node(), x_index)
         node = self.head
         x_array = []
         y_array = []
