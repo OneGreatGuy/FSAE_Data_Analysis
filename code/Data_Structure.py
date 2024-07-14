@@ -55,9 +55,10 @@ class Data_Structure:
         array_current_index = 0
 
         # find index for x and y variables in Linked List.
-        while x_index == -1 or y_index == -1 and array_current_index <= len(self.data_index):
+        while x_index == -1 or y_index == -1 and array_current_index < len(self.data_index):
             if self.data_index[array_current_index] == x_name:
                 x_index = array_current_index
+                print("x_index set: x=" + str(x_index))
             if self.data_index[array_current_index] == y_name:
                 y_index = array_current_index
                 print("y index set: y=" + str(y_index))
@@ -65,6 +66,15 @@ class Data_Structure:
             array_current_index = array_current_index + 1
 
         # make the axis data arrays.
+        if x_index == -1:
+            print("X index not found")
+            return
+
+        if y_index == -1:
+            print("y name:" + str(y_name))
+            print("Y index not found")
+            return
+
         x_array, y_array = self.linked_list.get_x_and_y_arrays(x_index, y_index)
 
         # make the titles for the axis. Also used for the graph title

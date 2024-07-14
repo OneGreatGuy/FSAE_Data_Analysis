@@ -1,6 +1,7 @@
 import dearpygui.dearpygui as dpg
 from Data_Structure import Data_Structure
 import matplotlib.pyplot as plt
+from matplotlib.ticker import AutoMinorLocator, MaxNLocator
 dpg.create_context()
 
 
@@ -57,7 +58,7 @@ class Sub_Window:
         self.items = []  # keep track of all items in subwindow
         self.data_structure = Data_Structure()  # data structure for data to be analyzed in Sub window
         self.x_axis = None
-        self.y_axis = []
+        self.y_axis = None
         self.x_axis_list = []
         self.y_axis_list = []
 
@@ -109,8 +110,8 @@ class Sub_Window:
         # create the graphing button to actually make a graph. Prevents user from trying to make a graph with no loaded data
         dpg.add_button(parent=self.id, label="graph", tag="graph"+str(self.id), callback=self.graph_data)
         print("file_input")
-        print(str(len(data_index)))
-        print(str(len(data_units)))
+        print("num of data" + str(len(data_index)))
+        print("num units" + str(len(data_units)))
 
         # add checkboxes to the x and y menus for each varaible.
         for i in range(0, len(data_units)):
@@ -131,25 +132,21 @@ class Sub_Window:
         return
 
     # specify behavior for when a checkbox in the y menu is clicked
-    def y_axis_callback(self, app_data, user_data):
-        # add the checkbox value to the y_axis array.
-        if app_data:
-            self.y_axis.append(user_data)
-        else:
-            for i in range(0, len(self.y_axis)):
-                if self.y_axis[i] == user_data:
-                    self.y_axis.pop(i)
-                    return
+    def y_axis_callback(self, sender, app_data, user_data):
+        # sets the x_axis variable. Only one x value is allowed
+        self.y_axis = user_data
+        # make sure each other checkbox is unchecked
+        for tag in self.y_axis_list:
+            if tag != str(sender):
+                dpg.configure_item(item=tag, default_value=False)
         return
 
     # Callback for the graph button
     def graph_data(self):
-        print("y_axis_array:")
-        for string in self.y_axis:
-            print(str(string))
+        print("y_axis_array:" + self.y_axis)
 
         # get data for the plot
-        x_data, y_data, x_name, y_name = self.data_structure.graph_data_array(self.x_axis, self.y_axis[0])
+        x_data, y_data, x_name, y_name = self.data_structure.graph_data_array(self.x_axis, self.y_axis)
 
         # create the scatter plot
         plt.scatter(x_data, y_data)
@@ -157,6 +154,23 @@ class Sub_Window:
         plt.ylabel(y_name)
         plt.title(x_name + " VS " + y_name)
 
+        ax = plt.gca()  # Get current axis
+        ax.xaxis.set_major_locator(MaxNLocator(nbins='auto', prune = None))
+        ax.yaxis.set_major_locator(MaxNLocator(nbins='auto', prune = None))
+        ax.xaxis.set_minor_locator(AutoMinorLocator())
+        ax.yaxis.set_minor_locator(AutoMinorLocator())
+
+        # Set tick parameters for better readability
+        ax.tick_params(axis='both', which='major', labelsize=12)
+        ax.tick_params(axis='both', which='minor', labelsize=10, length=4, color='gray')
+
+        # Show grid
+        ax.grid(True, which='both', linestyle='--', linewidth=0.5)
+        ax.invert_xaxis()  # Uncomment this line to reverse the x-axis
+        ax.invert_yaxis()  # Uncomment this line to reverse the y-axis
+
+        # Save the plot
+        plt.tight_layout()  # Adjust layout to prevent clipping of tick-labels
         # save the plot
         plt.savefig("../plots." + x_name + " VS " + y_name + ".png")
 
@@ -164,7 +178,7 @@ class Sub_Window:
         width, height, channels, data = dpg.load_image("../plots." + x_name + " VS " + y_name + ".png")
 
         # display the image
-        with dpg.texture_registry(show=True):
+        with dpg.texture_registry(show=False):
             dpg.add_static_texture(width=width, height=height, default_value=data, tag="texture_tag" + str(self.id))
         dpg.add_image("texture_tag" + str(self.id), parent=self.id)
         return
