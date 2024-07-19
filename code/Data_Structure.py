@@ -56,8 +56,6 @@ class Data_Structure:
 
             array_current_index = array_current_index + 1
 
-        # self.linked_list.quick_sort(self.linked_list.head, self.linked_list.get_tail_node(), x_index)
-
         x_array, y_array = self.linked_list.get_x_and_y_arrays(x_index, y_index)
 
         x_axis_name = str(x_name) + " (" + str(self.data_index_units[x_index]) + ")"
@@ -66,6 +64,37 @@ class Data_Structure:
         print(y_index)
         print(x_index)
         return x_array, y_array, x_axis_name, y_axis_name
+
+    def get_knock_data(self):
+        knock_1_index = -1
+        knock_2_index = -1
+        knock_3_index = -1
+        knock_4_index = -1
+        current_index = 0
+
+        while knock_1_index == -1 or knock_2_index == -1 or knock_3_index == -1 or knock_4_index == -1 and current_index <= len(self.data_index):
+            if self.data_index[current_index] == "Knock Table 1 Level":
+                knock_1_index = current_index
+            if self.data_index[current_index] == "Knock Table 2 Level":
+                knock_2_index = current_index
+            if self.data_index[current_index] == "Knock Table 3 Level":
+                knock_3_index = current_index
+            if self.data_index[current_index] == "Knock Table 4 Level":
+                knock_4_index = current_index
+            current_index = current_index + 1
+
+        return self.linked_list.get_data_array_from_index(knock_1_index), self.linked_list.get_data_array_from_index(knock_2_index), self.linked_list.get_data_array_from_index(knock_3_index), self.linked_list.get_data_array_from_index(knock_4_index)
+
+    def get_data_array_from_name(self, name):
+        index = -1
+        for current_index in range(len(self.data_index)):
+            if self.data_index[current_index] == name:
+                index = current_index
+                break
+        if index == -1:
+            print("could not find index for " + name)
+            return []
+        return self.linked_list.get_data_array_from_index(index)
 
     def print_data_index(self):
         for string in self.data_index:
@@ -176,39 +205,6 @@ class Linked_List:
 
         return None
 
-    def quick_sort(self, first, last, data_index):
-        if first == last:
-            return
-
-        pivot = self.quick_sort_pivot(first, last, data_index)
-
-        if pivot is not None and pivot.next is not None:
-            self.quick_sort(pivot.next, last, data_index)
-
-        if pivot is not None and first != pivot:
-            self.quick_sort(first,last, data_index)
-
-        return
-
-
-    def quick_sort_pivot(self, head, tail, data_index):
-        pivot = head
-        front = head
-        while front is not None and front != tail:
-            if front.data[data_index] < tail.data[data_index]:
-                pivot = head
-                temp_data = head.data
-                head.data = front.data
-                front.data = temp_data
-                head = head.next
-
-            front = front.next
-
-        temp_data = head.data
-        head.data = tail.data
-        tail.data = temp_data
-        return pivot
-
     def get_tail_node(self):
         node = self.head
         while node.next is not None:
@@ -216,7 +212,6 @@ class Linked_List:
         return node
 
     def get_x_and_y_arrays(self, x_index, y_index):
-        # self.quick_sort(self.head, self.get_tail_node(), x_index)
         node = self.head
         x_array = []
         y_array = []
@@ -226,3 +221,11 @@ class Linked_List:
             node = node.next
 
         return x_array, y_array
+
+    def get_data_array_from_index(self, index):
+        node = self.head
+        array = []
+        while node is not None:
+            array.append(node.data[index])
+            node = node.next
+        return array

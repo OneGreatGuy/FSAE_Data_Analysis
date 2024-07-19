@@ -1,6 +1,8 @@
 import dearpygui.dearpygui as dpg
 from Data_Structure import Data_Structure
 import matplotlib.pyplot as plt
+import numpy as np
+from scipy.optimize import minimize
 dpg.create_context()
 
 
@@ -81,7 +83,9 @@ class Sub_Window:
         return
 
     def file_input_callback(self, sender, app_data):
+        print("starting parse")
         self.data_structure.parse_file(app_data.get("file_path_name", ""))
+        print("finished parse")
         dpg.hide_item(sender)
         dpg.hide_item("load_file"+str(self.id))
         data_index, data_units = self.data_structure.get_variables()
@@ -94,6 +98,7 @@ class Sub_Window:
             self.x_axis_list.append(str(data_index[i]) + "x" + str(self.id) + str(data_units[i]) + str(i))
             dpg.add_checkbox(label=str(data_index[i]) + " " + str(data_units[i]), tag=str(data_index[i]) + "y" + str(self.id) + str(data_units[i] + str(i)), parent="y_axis"+str(self.id), callback=self.y_axis_callback, user_data=str(data_index[i]))
             self.y_axis_list.append(str(data_index[i]) + "y" + str(self.id) + str(data_units[i]) + str(i))
+        dpg.add_button(parent=self.id, label="knock", tag = "knock" + str(self.id), callback=self.knock_callback)
         return
 
     def x_axis_callback(self, sender, app_data, user_data):
@@ -111,6 +116,114 @@ class Sub_Window:
                 if self.y_axis[i] == user_data:
                     self.y_axis.pop(i)
                     return
+        return
+
+    def knock_callback(self):
+        with dpg.table(header_row=False, parent=self.id, tag="knock window"):
+            dpg.add_table_column()
+            dpg.add_table_column()
+            dpg.add_table_column()
+
+            # Top row with labels
+            with dpg.table_row():
+                dpg.add_text("Knock Evaluation")
+                dpg.add_text("Knock Gain")
+                dpg.add_text("Suggested Gain")
+
+            # Rows for each cylinder
+            for i in range(1, 5):
+                with dpg.table_row():
+                    dpg.add_text(f"Cylinder {i}")
+                    dpg.add_input_double(label=f"knock gain {i}", tag=f"knock_gain_{i}", default_value=0.0)
+                    dpg.add_text("", tag=f"suggested_gain_{i}")
+
+            with dpg.table_row():
+                dpg.add_button(label="see knock analysis", callback=self.knock_analysis)
+
+    def knock_analysis(self):
+        def round_to_nearest(value, base):
+            return base * round(value / base)
+
+        # Evaluate the knock values
+        knock_1_tot = 0
+        knock_2_tot = 0
+        knock_3_tot = 0
+        knock_4_tot = 0
+        knock1, knock2, knock3, knock4 = self.data_structure.get_knock_data()
+        knock1 = np.array(knock1, dtype=float) / dpg.get_value("knock_gain_1")
+        knock2 = np.array(knock2, dtype=float) / dpg.get_value("knock_gain_2")
+        knock3 = np.array(knock3, dtype=float) / dpg.get_value("knock_gain_3")
+        knock4 = np.array(knock4, dtype=float) / dpg.get_value("knock_gain_4")
+
+        def optimize_gain(gains):
+            g1, g2, g3, g4 = gains
+            scaled_k1 = knock1 * g1
+            scaled_k2 = knock2 * g2
+            scaled_k3 = knock3 * g3
+            scaled_k4 = knock4 * g4
+            return np.sum((scaled_k1 - scaled_k2) ** 2 +
+                          (scaled_k1 - scaled_k3) ** 2 +
+                          (scaled_k1 - scaled_k4) ** 2 +
+                          (scaled_k2 - scaled_k3) ** 2 +
+                          (scaled_k2 - scaled_k4) ** 2 +
+                          (scaled_k3 - scaled_k4) ** 2)
+
+        constraints = [
+            {'type': 'ineq', 'fun': lambda x: x - 1e-2},  # gains should be greater than 0.01
+            {'type': 'ineq', 'fun': lambda x: 2 - x}  # gains should be less than 100
+            ]
+
+        initial_guess = [dpg.get_value("knock_gain_1"), dpg.get_value("knock_gain_2"), dpg.get_value("knock_gain_3"), dpg.get_value("knock_gain_4")]
+        optimized_gains = minimize(optimize_gain, initial_guess, constraints=constraints).x
+
+        max_gain = max(optimized_gains[0], optimized_gains[1], optimized_gains[2], optimized_gains[3])
+        optimized_gains = optimized_gains * (1/max_gain)
+
+        dpg.set_value("suggested_gain_1", optimized_gains[0])
+        dpg.set_value("suggested_gain_2", optimized_gains[1])
+        dpg.set_value("suggested_gain_3", optimized_gains[2])
+        dpg.set_value("suggested_gain_4", optimized_gains[3])
+
+        # Get knock threshold suggestions
+        global_knock = self.data_structure.get_data_array_from_name("Knock Level  Global")
+        rpm = self.data_structure.get_data_array_from_name("Engine Speed")
+        tps = self.data_structure.get_data_array_from_name("TPS (Main)")
+
+        if not global_knock or not rpm or not tps:
+            print("Error: Missing required data for analysis.")
+            return
+
+        col = 16
+        row = 11
+        knock_threshold_arr_max = [[0 for _ in range(col)] for _ in range(row)]
+        for i in range(min(len(global_knock), len(rpm), len(tps))):
+            tps_index = min(10, round_to_nearest(float(tps[i]), 10) / 10)
+            rpm_index = min(14, round_to_nearest(float(rpm[i]), 500) / 500)
+            if float(global_knock[i]) > knock_threshold_arr_max[int(tps_index)][int(rpm_index)]:
+                knock_threshold_arr_max[int(tps_index)][int(rpm_index)] = float(global_knock[i])
+
+        # Create the table for displaying knock thresholds
+        table_id = dpg.add_table(parent=self.id, header_row=False, borders_innerH=True, borders_outerH=True,
+                                 borders_innerV=True, borders_outerV=True)
+        for _ in range(17):  # 16 columns for values + 1 for labels
+            dpg.add_table_column(parent=table_id)
+
+        # Add the header row
+        with dpg.table_row(parent=table_id):
+            dpg.add_text("TPS/RPM")
+            for j in range(16):
+                with dpg.table_cell():
+                    dpg.add_text(f"{j * 500}")
+
+        # Add the data rows
+        for i in range(11):
+            with dpg.table_row(parent=table_id):
+                with dpg.table_cell():
+                    dpg.add_text(f"{i * 10}")
+                for j in range(16):
+                    with dpg.table_cell():
+                        dpg.add_text(f"{knock_threshold_arr_max[i][j] * 1.2}")
+
         return
 
     def graph_data(self):
