@@ -1,12 +1,8 @@
 import csv
 
-# This is the main data structure class.
-
 
 class Data_Structure:
     def __init__(self):
-
-        # Variables in the data structure, the linked list stores all the data
         self.linked_list = Linked_List()
         self.data_index = []
         self.data_index_units = []
@@ -14,8 +10,6 @@ class Data_Structure:
         self.file = ""
         self.num_data_points = 0
 
-    # Parses a csv from the input file path into the structures linked list
-    # Needs to be edited to accept both Link and Haltech CSV's
     def parse_file(self, input_file_path):
         line_number = 0
         self.file = input_file_path
@@ -26,8 +20,6 @@ class Data_Structure:
                 node_data = []
                 for string in line:
                     if line_number < 3:
-
-                        # Initial declarations to idenitify log
 
                         if line_number == 0:
                             self.log_name = string
@@ -45,57 +37,75 @@ class Data_Structure:
                 line_number = line_number + 1
 
         self.num_data_points = line_number
-        self.validate_linked_list()  # confirms linked list is correct for the data recieved
+        self.validate_linked_list()
+        print(str(len(self.data_index)))
+        print(str(len(self.data_index_units)))
         return
 
-    # returns axis elements and titles to be used in a matplotlib pyplot
     def graph_data_array(self, x_name, y_name):
         x_index = -1
         y_index = -1
         array_current_index = 0
 
-        # find index for x and y variables in Linked List.
-        while x_index == -1 or y_index == -1 and array_current_index < len(self.data_index):
+        while x_index == -1 or y_index == -1 and array_current_index <= len(self.data_index):
             if self.data_index[array_current_index] == x_name:
                 x_index = array_current_index
-                print("x_index set: x=" + str(x_index))
             if self.data_index[array_current_index] == y_name:
                 y_index = array_current_index
                 print("y index set: y=" + str(y_index))
 
             array_current_index = array_current_index + 1
 
-        # make the axis data arrays.
-        if x_index == -1:
-            print("X index not found")
-            return
-
-        if y_index == -1:
-            print("y name:" + str(y_name))
-            print("Y index not found")
-            return
-
         x_array, y_array = self.linked_list.get_x_and_y_arrays(x_index, y_index)
 
-        # make the titles for the axis. Also used for the graph title
         x_axis_name = str(x_name) + " (" + str(self.data_index_units[x_index]) + ")"
         y_axis_name = str(y_name) + " (" + str(self.data_index_units[y_index]) + ")"
 
+        print(y_index)
+        print(x_index)
         return x_array, y_array, x_axis_name, y_axis_name
 
-    # prints every value in the data index. Useful to see what variables are stored
+    def get_knock_data(self):
+        knock_1_index = -1
+        knock_2_index = -1
+        knock_3_index = -1
+        knock_4_index = -1
+        current_index = 0
+
+        while knock_1_index == -1 or knock_2_index == -1 or knock_3_index == -1 or knock_4_index == -1 and current_index <= len(self.data_index):
+            if self.data_index[current_index] == "Knock Table 1 Level":
+                knock_1_index = current_index
+            if self.data_index[current_index] == "Knock Table 2 Level":
+                knock_2_index = current_index
+            if self.data_index[current_index] == "Knock Table 3 Level":
+                knock_3_index = current_index
+            if self.data_index[current_index] == "Knock Table 4 Level":
+                knock_4_index = current_index
+            current_index = current_index + 1
+
+        return self.linked_list.get_data_array_from_index(knock_1_index), self.linked_list.get_data_array_from_index(knock_2_index), self.linked_list.get_data_array_from_index(knock_3_index), self.linked_list.get_data_array_from_index(knock_4_index)
+
+    def get_data_array_from_name(self, name):
+        index = -1
+        for current_index in range(len(self.data_index)):
+            if self.data_index[current_index] == name:
+                index = current_index
+                break
+        if index == -1:
+            print("could not find index for " + name)
+            return []
+        return self.linked_list.get_data_array_from_index(index)
+
     def print_data_index(self):
         for string in self.data_index:
             print(string)
         return
 
-    # prints every unit for each variable stored. Useful for checking the variables have the right untis
     def print_data_units(self):
         for string in self.data_index_units:
             print(string)
         return
 
-    # confirms the number of nodes in linked list is equal to the number of lines in the csv.
     def validate_linked_list(self):
 
         node_count = 4  # start at 4 due to a line for name of csv, parameters, and units, and blank line
@@ -110,8 +120,6 @@ class Data_Structure:
                 else:
                     bad_data_count = bad_data_count + 1
 
-        # error statement if the linked list is not valid for the given csv.
-        # TODO move to an error message in the GUI
         if node_count != self.num_data_points:
             print(" Data in Linked list does not equal nodes in csv")
             print("Number of Bad Nodes: " + str(bad_data_count))
@@ -124,21 +132,17 @@ class Data_Structure:
         return self.data_index, self.data_index_units
 
 
-# Node class used for linked List.
 class Node:
     def __init__(self, data):
         self.data = data
         self.next = None
 
 
-# Linked List data structure for use in the actual data structure
 class Linked_List:
     def __init__(self):
         self.head = None
         self.num_nodes = 0
 
-    # Print every node's data and its position that is in the linked list
-    # TODO move print to an output box in the GUI
     def print_linked_list(self):
         current_node = self.head
         node_num = 0
@@ -149,22 +153,18 @@ class Linked_List:
 
         return
 
-    # Adds a node to the Linked List given the data.
-    # TODO check if you can get rid of temp_node
     def insert_node(self, data):
-        new_node = Node(data)  # create new node
+        new_node = Node(data)
         temp_node = self.head
         self.head = new_node
         new_node.next = temp_node
         self.num_nodes = self.num_nodes + 1
         return
 
-    # Delete a node based on a node or its previous node/data. the node parameter can also be data
     def delete_node(self, node, previous_node):
         if not isinstance(node, Node):
             node, previous_node = self.find_node_from_data(node)
 
-        # find previous node if not specified so the linked list structure can be maintained
         if previous_node is None:
             previous_node = self.get_previous_node(node)
 
@@ -178,9 +178,7 @@ class Linked_List:
         del node
         return
 
-    # Returns the node structure that has the same data as specified, as well as the node before it
     def find_node_from_data(self, data):
-        # check if head node is the right node Has to be this way due to no previous node
         if self.head.data == data:
             return self.head, None
 
@@ -194,15 +192,12 @@ class Linked_List:
 
         return None, None
 
-    # returns the node that comes before the node specified.
-    # TODO make a check to make sure that a node is supplied, and an error message if not
-    def get_previous_node(self, node):
+    def get_previous_node(self,node):
         if node == self.head:
             return None
 
         current_node = self.head
 
-        # iterate through linked list to find the node specified.
         while current_node.next is not None:
             if current_node.next == node:
                 return current_node
@@ -210,52 +205,13 @@ class Linked_List:
 
         return None
 
-    # TODO check if this actually works, I don't think it does tbh
-    def quick_sort(self, first, last, data_index):
-        if first == last:
-            return
-
-        pivot = self.quick_sort_pivot(first, last, data_index)
-
-        if pivot is not None and pivot.next is not None:
-            self.quick_sort(pivot.next, last, data_index)
-
-        if pivot is not None and first != pivot:
-            self.quick_sort(first,last, data_index)
-
-        return
-
-    # TODO check if it actually works
-    def quick_sort_pivot(self, head, tail, data_index):
-        pivot = head
-        front = head
-        while front is not None and front != tail:
-            if front.data[data_index] < tail.data[data_index]:
-                pivot = head
-                temp_data = head.data
-                head.data = front.data
-                front.data = temp_data
-                head = head.next
-
-            front = front.next
-
-        temp_data = head.data
-        head.data = tail.data
-        tail.data = temp_data
-        return pivot
-
-    # returns the last node in the linked list.
-    # TODO print an error message to GUI if linked list is empty
     def get_tail_node(self):
         node = self.head
         while node.next is not None:
             node = node.next
         return node
 
-    # Returns two arays based on the index for the data
-    # TODO error message if linked list is empty or try to access an element outside of index
     def get_x_and_y_arrays(self, x_index, y_index):
-        # self.quick_sort(self.head, self.get_tail_node(), x_index)
         node = self.head
         x_array = []
         y_array = []
@@ -265,3 +221,11 @@ class Linked_List:
             node = node.next
 
         return x_array, y_array
+
+    def get_data_array_from_index(self, index):
+        node = self.head
+        array = []
+        while node is not None:
+            array.append(node.data[index])
+            node = node.next
+        return array
